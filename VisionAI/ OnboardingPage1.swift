@@ -1,19 +1,7 @@
 import SwiftUI
 
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        let scanner = Scanner(string: hex.hasPrefix("#") ? String(hex.dropFirst()) : hex)
-        var hexNumber: UInt64 = 0
-        scanner.scanHexInt64(&hexNumber)
-        let r = Double((hexNumber & 0xFF0000) >> 16) / 255
-        let g = Double((hexNumber & 0x00FF00) >> 8) / 255
-        let b = Double(hexNumber & 0x0000FF) / 255
-        self.init(red: r, green: g, blue: b)
-    }
-}
-
 struct OnboardingPage1: View {
+    @Binding var page: Int
 
     private let bgColor = Color(hex: "#2D3135")
     private let subtitleColor = Color(white: 0.85)
@@ -60,18 +48,31 @@ struct OnboardingPage1: View {
 
                 HStack(spacing: 14) {
                     Capsule()
-                        .frame(width: 44, height: 12)
+                        .frame(width: 35, height: 12)
                         .foregroundColor(Color.white.opacity(0.25))
 
-                    Circle()
-                        .frame(width: 14, height: 14)
-                        .foregroundColor(Color.white.opacity(0.2))
+                    Button {
+                        withAnimation(.easeInOut) {
+                            page = 1   // 👉 move to onboarding page 2
+                        }
+                    } label: {
+                        Circle()
+                            .frame(width: 14, height: 14)
+                            .foregroundColor(Color.white.opacity(0.6))
+                    }
 
-                    Circle()
-                        .frame(width: 14, height: 14)
-                        .foregroundColor(Color.white.opacity(0.2))
+                    Button {
+                            withAnimation(.easeInOut) {
+                                page = 2
+                            }
+                        } label: {
+                            Circle()
+                                .frame(width: 14, height: 14)
+                                .foregroundColor(Color.white.opacity(0.6))
+                        }
                 }
                 .padding(.bottom, 36)
+
             }
         }
     }
@@ -79,7 +80,7 @@ struct OnboardingPage1: View {
 
 struct OnboardingPage1_Previews: PreviewProvider {
     static var previews: some View {
-        OnboardingPage1()
+        OnboardingPage1(page: .constant(0))
             .previewDevice("iPhone 14 Pro")
     }
 }

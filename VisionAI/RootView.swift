@@ -1,11 +1,12 @@
 import SwiftUI
+
 struct RootView: View {
     @State private var showOnboarding = false
 
     var body: some View {
         ZStack {
             if showOnboarding {
-                OnboardingPage1()
+                OnboardingContainer()
                     .transition(.opacity)
             } else {
                 SplashView {
