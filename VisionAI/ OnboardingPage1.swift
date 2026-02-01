@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingPage1: View {
     @Binding var page: Int
+    let onFinish: () -> Void
 
     private let bgColor = Color(hex: "#2D3135")
     private let subtitleColor = Color(white: 0.85)
@@ -16,7 +17,7 @@ struct OnboardingPage1: View {
                 HStack {
                     Spacer()
                     Button("Skip") {
-                        
+                        onFinish()
                     }
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(skipColor)
@@ -53,7 +54,7 @@ struct OnboardingPage1: View {
 
                     Button {
                         withAnimation(.easeInOut) {
-                            page = 1   // 👉 move to onboarding page 2
+                            page = 1  
                         }
                     } label: {
                         Circle()
@@ -80,7 +81,10 @@ struct OnboardingPage1: View {
 
 struct OnboardingPage1_Previews: PreviewProvider {
     static var previews: some View {
-        OnboardingPage1(page: .constant(0))
-            .previewDevice("iPhone 14 Pro")
+        OnboardingPage1(
+            page: .constant(0),
+            onFinish: {}
+        )
+        .previewDevice("iPhone 14 Pro")
     }
 }

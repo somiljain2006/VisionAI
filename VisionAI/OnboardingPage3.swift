@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingPage3: View {
     @Binding var page: Int
+    let onFinish: () -> Void
 
     private let gradient = LinearGradient(
         colors: [
@@ -70,8 +71,9 @@ struct OnboardingPage3: View {
                 .padding(.bottom, 20)
 
                 Button {
-                    
-                } label: {
+                    onFinish()
+                }
+                label: {
                     Text("Get Started")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(Color(hex: "#2E3B6D"))
@@ -90,7 +92,10 @@ struct OnboardingPage3: View {
 
 struct OnboardingPage3_Previews: PreviewProvider {
     static var previews: some View {
-        OnboardingPage3(page: .constant(2))
-            .previewDevice("iPhone 14 Pro")
+        OnboardingPage3(
+            page: .constant(2),
+            onFinish: {}
+        )
+        .previewDevice("iPhone 14 Pro")
     }
 }

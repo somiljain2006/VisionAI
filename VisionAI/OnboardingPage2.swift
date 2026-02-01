@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingPage2: View {
     @Binding var page: Int
+    let onFinish: () -> Void
 
     private let bgColor = Color(hex: "#C7C9CC")
     private let skipColor = Color(hex: "#3D538B")
@@ -15,9 +16,7 @@ struct OnboardingPage2: View {
                 HStack {
                     Spacer()
                     Button("Skip") {
-                        withAnimation {
-                            page = 1 
-                        }
+                        onFinish()
                     }
                     .font(.system(size: 19, weight: .medium))
                     .foregroundColor(skipColor)
@@ -45,7 +44,8 @@ struct OnboardingPage2: View {
                 Image("onboarding_2")
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: 340)
+                    .frame(maxWidth: 420)
+                    .padding(.horizontal, 12)
 
                 Spacer()
 
@@ -82,7 +82,10 @@ struct OnboardingPage2: View {
 
 struct OnboardingPage2_Previews: PreviewProvider {
     static var previews: some View {
-        OnboardingPage2(page: .constant(1))
-            .previewDevice("iPhone 14 Pro")
+        OnboardingPage2(
+            page: .constant(1),
+            onFinish: {}
+        )
+        .previewDevice("iPhone 14 Pro")
     }
 }
