@@ -2,12 +2,25 @@ import SwiftUI
 import UserNotifications
 
 struct NotificationPermissionView: View {
+    
+    @State private var showModeSelection = false
+    @State private var isRequesting = false
 
     private let bgColor = Color(hex: "#2D3135")
     private let accentColor = Color(hex: "#C37CAB")
     private let buttonColor = Color(hex: "#49494A")
 
     var body: some View {
+        if showModeSelection {
+            ModeSelectionView()
+                .transition(.opacity)
+        } else {
+            notificationView
+                .transition(.opacity)
+        }
+    }
+
+    private var notificationView: some View {
         ZStack {
             bgColor.ignoresSafeArea()
 
@@ -26,7 +39,7 @@ struct NotificationPermissionView: View {
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
 
-                Text("Enable notifications to get instant alert\nand updates.")
+                Text("Enable notifications to get instant alerts\nand updates.")
                     .font(.system(size: 17))
                     .foregroundColor(accentColor)
                     .multilineTextAlignment(.center)
@@ -44,6 +57,7 @@ struct NotificationPermissionView: View {
                 Spacer()
 
                 Button {
+                    isRequesting = true
                     requestNotificationPermission()
                 } label: {
                     Text("Allow")
@@ -54,23 +68,51 @@ struct NotificationPermissionView: View {
                         .background(buttonColor)
                         .cornerRadius(14)
                 }
+                .disabled(isRequesting)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)
             }
         }
+        
+        .onAppear {
+            UNUserNotificationCenter.current()
+                .getNotificationSettings { settings in
+                    DispatchQueue.main.async {
+                        if settings.authorizationStatus == .authorized ||
+                           settings.authorizationStatus == .provisional {
+                            showModeSelection = true
+                        }
+                    }
+                }
+        }
     }
 
     private func requestNotificationPermission() {
-        UNUserNotificationCenter.current()
-            .requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
-                DispatchQueue.main.async {
-                    if granted {
-                        print("Notification permission granted")
-                    } else {
-                        openAppSettings()
+        let center = UNUserNotificationCenter.current()
+
+        center.getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                if settings.authorizationStatus == .authorized {
+                    withAnimation {
+                        showModeSelection = true
+                    }
+                } else {
+                    center.requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
+                        DispatchQueue.main.async {
+                            if granted {
+                                isRequesting = false
+                                withAnimation {
+                                    showModeSelection = true
+                                }
+                            } else {
+                                isRequesting = false
+                                openAppSettings()
+                            }
+                        }
                     }
                 }
             }
+        }
     }
 }
 
