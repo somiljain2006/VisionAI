@@ -19,11 +19,11 @@ struct OnboardingPage1: View {
                     Button("Skip") {
                         onFinish()
                     }
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 19, weight: .medium))
                     .foregroundColor(skipColor)
                     .padding(.trailing, 24)
                 }
-                .padding(.top, 8)
+                .padding(.top, 18)
 
                 Spacer(minLength: 8)
 

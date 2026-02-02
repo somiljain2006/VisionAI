@@ -17,18 +17,27 @@ struct OnboardingContainer: View {
     var body: some View {
         TabView(selection: $page) {
 
-            OnboardingPage1(page: $page, onFinish: onFinish)
-                .tag(0)
+            OnboardingPage1(
+                page: $page,
+                onFinish: onFinish
+            )
+            .tag(0)
 
-            OnboardingPage2(page: $page, onFinish: onFinish)
-                .tag(1)
+            OnboardingPage2(
+                page: $page,
+                onFinish: onFinish
+            )
+            .tag(1)
 
-            OnboardingPage3(page: $page, onFinish: onFinish)
-                .tag(2)
+            OnboardingPage3(
+                page: $page,
+                onFinish: onFinish
+            )
+            .tag(2)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
+        .ignoresSafeArea()
 
-        // ✅ Auto slide logic
         .onReceive(timer) { _ in
             guard isAutoSliding else { return }
 
@@ -36,13 +45,9 @@ struct OnboardingContainer: View {
                 if page < totalPages - 1 {
                     page += 1
                 } else {
-                    isAutoSliding = false // stop at last page
+                    isAutoSliding = false
                 }
             }
-        }
-
-        .onChange(of: page) { _, _ in
-            isAutoSliding = false
         }
     }
 }

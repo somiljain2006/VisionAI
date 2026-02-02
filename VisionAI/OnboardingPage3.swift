@@ -37,43 +37,14 @@ struct OnboardingPage3: View {
                 Image("onboarding_3")
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: 320)
+                    .frame(maxWidth: 400)
                     .shadow(radius: 10)
 
                 Spacer()
 
-                HStack(spacing: 18) {
-
-                    Button {
-                        withAnimation(.easeInOut) {
-                            page = 0
-                        }
-                    } label: {
-                        Circle()
-                            .frame(width: 14, height: 14)
-                            .foregroundColor(Color.white.opacity(0.4))
-                    }
-
-                    Button {
-                        withAnimation(.easeInOut) {
-                            page = 1
-                        }
-                    } label: {
-                        Circle()
-                            .frame(width: 14, height: 14)
-                            .foregroundColor(Color.white.opacity(0.4))
-                    }
-
-                    Capsule()
-                        .frame(width: 35, height: 14)
-                        .foregroundColor(Color.white.opacity(0.6))
-                }
-                .padding(.bottom, 20)
-
                 Button {
                     onFinish()
-                }
-                label: {
+                } label: {
                     Text("Get Started")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(Color(hex: "#2E3B6D"))
