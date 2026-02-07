@@ -4,13 +4,17 @@ import AVFoundation
 struct DriverDetectionView: View {
 
     @Environment(\.dismiss) var dismiss
+    
     @StateObject private var detector = EyeDetector()
+    
     @State private var showingAlert = false
     @State private var isRestarting = false
     @State private var showAnalytics = false
     @State private var tripAlerts = 0
     @State private var alertTimer: Timer?
     @State private var alertPlayer: AVAudioPlayer?
+    
+    @AppStorage("profileImageData") private var profileImageData: Data?
 
     private let bgColor = Color(hex: "#2D3135")
     private let buttonColor = Color(hex: "#49494A")
@@ -69,13 +73,25 @@ struct DriverDetectionView: View {
                         NavigationLink(destination: DriverProfileView(onExit: {
                             detector.stop()
                         })) {
-                            Image("person")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 45, height: 45)
-                                .padding(.trailing, 24)
-                                .shadow(radius: 2)
-                                .padding(.top, 25)
+                            Group {
+                                if let data = profileImageData,
+                                   let uiImage = UIImage(data: data) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                } else {
+                                    Image(systemName: "person.fill")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .padding(8)
+                                }
+                            }
+                            .frame(width: 45, height: 45)
+                            .background(Color.white.opacity(0.12))
+                            .clipShape(Circle())
+                            .shadow(radius: 2)
+                            .padding(.trailing, 24)
+                            .padding(.top, 25)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }

@@ -7,7 +7,10 @@ struct DriverProfileView: View {
     @State private var showReportDialog = false
     @State private var showCopiedToast = false
     @State private var showShareSheet = false
+    @State private var showImagePicker = false
+    @State private var selectedImage: UIImage?
 
+    @AppStorage("profileImageData") private var profileImageData: Data?
     @AppStorage("userName") private var userName: String = ""
     @AppStorage("userEmail") private var userEmail: String = ""
     var onExit: (() -> Void)? = nil
@@ -71,16 +74,38 @@ struct DriverProfileView: View {
 
     private var avatarSection: some View {
         VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.06))
-                    .frame(width: 116, height: 116)
+            ZStack(alignment: .bottomTrailing) {
 
-                Image(systemName: "person.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 44, height: 44)
-                    .foregroundColor(.white)
+                Group {
+                    if let data = profileImageData,
+                       let uiImage = UIImage(data: data) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(systemName: "person.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(28)
+                            .foregroundColor(.white)
+                    }
+                }
+                .frame(width: 116, height: 116)
+                .background(Color.white.opacity(0.06))
+                .clipShape(Circle())
+
+                Button {
+                    showImagePicker = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 28, height: 28)
+                        .background(Color(hex: "#6CB8C9"))
+                        .clipShape(Circle())
+                        .shadow(radius: 4)
+                }
+                .offset(x: -6, y: -6)
             }
 
             Text(userName.isEmpty ? "Driver" : userName)
@@ -90,6 +115,15 @@ struct DriverProfileView: View {
             Text(userEmail.isEmpty ? "—" : userEmail)
                 .font(.system(size: 15))
                 .foregroundColor(cardTextColor)
+        }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(image: $selectedImage)
+                .onDisappear {
+                    if let image = selectedImage,
+                       let data = image.jpegData(compressionQuality: 0.8) {
+                        profileImageData = data
+                    }
+                }
         }
     }
 
@@ -167,7 +201,7 @@ struct DriverProfileView: View {
 
             VStack(spacing: 20) {
                 HStack {
-                    Text("Report Issue")
+                    Text("Report Issue at")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
 
