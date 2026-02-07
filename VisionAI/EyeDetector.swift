@@ -8,6 +8,11 @@ final class EyeDetector: NSObject, ObservableObject {
     @Published var eyesOpen: Bool = true
     @Published var closedDuration: TimeInterval = 0
     @Published var isStarting: Bool = false
+    @Published var totalTripDuration: TimeInterval = 0
+    
+    @Published private(set) var alertsCount: Int = 0
+    @Published private(set) var lastSessionDuration: TimeInterval = 0
+    @Published private(set) var lastSessionAlerts: Int = 0
 
     var onEyesClosedLong: (() -> Void)?
     private let closedThreshold: TimeInterval = 5.0
@@ -17,6 +22,8 @@ final class EyeDetector: NSObject, ObservableObject {
     private let videoQueue = DispatchQueue(label: "vision.video.queue")
     private var lastClosedStart: Date?
     private var lastFrameTime: Date?
+    private var sessionStart: Date?
+    private var alertedWhileClosed: Bool = false
 
     private lazy var faceRequest: VNDetectFaceLandmarksRequest = {
         VNDetectFaceLandmarksRequest { [weak self] request, _ in
@@ -35,21 +42,42 @@ final class EyeDetector: NSObject, ObservableObject {
         guard !isRunning else { return }
         isStarting = true
         isRunning = true
+        alertsCount = 0 // Resets session count (trip count handled in View)
+        sessionStart = Date()
         checkPermissionAndStart()
     }
 
     func stop() {
+        if let start = sessionStart {
+            let duration = Date().timeIntervalSince(start)
+            lastSessionDuration = duration
+            totalTripDuration += duration // Accumulate the time
+        } else {
+            lastSessionDuration = 0
+        }
+        lastSessionAlerts = alertsCount
         lastClosedStart = nil
         closedDuration = 0
         eyesOpen = true
         isStarting = false
         isRunning = false
+        alertedWhileClosed = false
+        sessionStart = nil
         if let session = session, session.isRunning {
             session.stopRunning()
         }
         session = nil
     }
+    
+    func resetTrip() {
+            totalTripDuration = 0
+            lastSessionDuration = 0
+    }
 
+    func registerAlert() {
+        alertsCount += 1
+    }
+    
     private func checkPermissionAndStart() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:

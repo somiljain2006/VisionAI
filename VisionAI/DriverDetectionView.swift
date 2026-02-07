@@ -7,6 +7,8 @@ struct DriverDetectionView: View {
     @StateObject private var detector = EyeDetector()
     @State private var showingAlert = false
     @State private var isRestarting = false
+    @State private var showAnalytics = false
+    @State private var tripAlerts = 0
 
     private let bgColor = Color(hex: "#2D3135")
     private let buttonColor = Color(hex: "#49494A")
@@ -135,6 +137,11 @@ struct DriverDetectionView: View {
                 .transition(.opacity)
                 .zIndex(100)
             }
+            
+            if showAnalytics {
+                analyticsView
+                    .zIndex(200)
+            }
         }
         .navigationBarBackButtonHidden(true)
         .onChange(of: detector.isRunning) { _, newValue in
@@ -145,6 +152,7 @@ struct DriverDetectionView: View {
         .onReceive(detector.$closedDuration) { duration in
             if duration > 5.00 && !showingAlert {
                 print("🚨 Eyes closed for \(duration)s — TRIGGER ALARM")
+                tripAlerts += 1
                 showingAlert = true
                 detector.stop()
             }
@@ -155,9 +163,87 @@ struct DriverDetectionView: View {
         withAnimation {
             if detector.isRunning {
                 detector.stop()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    withAnimation(.easeInOut) {
+                        showAnalytics = true
+                    }
+                }
             } else {
+                tripAlerts = 0
+                detector.resetTrip()
                 detector.start()
             }
+        }
+    }
+
+    private var analyticsView: some View {
+        ZStack {
+            bgColor.ignoresSafeArea()
+
+            VStack(spacing: 18) {
+                HStack {
+                    Text("Session Summary")
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                .padding(.top, 24)
+                .padding(.horizontal, 20)
+
+                VStack(spacing: 18) {
+                    HStack {
+                        Text("Focus Time")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color.white.opacity(0.6))
+                        Spacer()
+                        Text(sessionTimeText(from: detector.totalTripDuration))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+
+                    HStack {
+                        Text("Drowsiness Alerts")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color.white.opacity(0.6))
+                        Spacer()
+                        Text("\(tripAlerts)")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+
+                Spacer()
+
+                Button {
+                    withAnimation {
+                        showAnalytics = false
+                    }
+                } label: {
+                    Text("Back to Dashboard")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Color(hex: "#6CB8C9"))
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(Color(hex: "#49494A"))
+                        .cornerRadius(12)
+                        .shadow(radius: 6)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 28)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
+    }
+
+    private func sessionTimeText(from duration: TimeInterval) -> String {
+        let secs = Int(round(duration))
+        if secs >= 60 {
+            let minutes = secs / 60
+            return "\(minutes) min"
+        } else {
+            return "\(secs) sec"
         }
     }
 }
