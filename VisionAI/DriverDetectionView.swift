@@ -9,6 +9,8 @@ struct DriverDetectionView: View {
     @State private var isRestarting = false
     @State private var showAnalytics = false
     @State private var tripAlerts = 0
+    @State private var alertTimer: Timer?
+    @State private var alertPlayer: AVAudioPlayer?
 
     private let bgColor = Color(hex: "#2D3135")
     private let buttonColor = Color(hex: "#49494A")
@@ -129,6 +131,7 @@ struct DriverDetectionView: View {
 
             if showingAlert {
                 WakeUpScreen {
+                    stopAlertSound()
                     withAnimation(.easeOut(duration: 0.1)) {
                         showingAlert = false
                     }
@@ -143,6 +146,9 @@ struct DriverDetectionView: View {
                     .zIndex(200)
             }
         }
+        .onAppear {
+            configureAudioSession()
+        }
         .navigationBarBackButtonHidden(true)
         .onChange(of: detector.isRunning) { _, newValue in
             if newValue {
@@ -154,6 +160,7 @@ struct DriverDetectionView: View {
                 print("🚨 Eyes closed for \(duration)s — TRIGGER ALARM")
                 tripAlerts += 1
                 showingAlert = true
+                playAlertSound()
                 detector.stop()
             }
         }
@@ -162,6 +169,7 @@ struct DriverDetectionView: View {
     private func toggleDetection() {
         withAnimation {
             if detector.isRunning {
+                stopAlertSound()
                 detector.stop()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     withAnimation(.easeInOut) {
@@ -246,4 +254,39 @@ struct DriverDetectionView: View {
             return "\(secs) sec"
         }
     }
+    
+    private func playAlertSound() {
+        stopAlertSound()
+
+        guard let url = Bundle.main.url(forResource: "alarm", withExtension: "wav") else {
+            print("❌ alarm.wav not found in bundle")
+            return
+        }
+
+        do {
+            alertPlayer = try AVAudioPlayer(contentsOf: url)
+            alertPlayer?.volume = 1.0
+            alertPlayer?.numberOfLoops = -1
+            alertPlayer?.prepareToPlay()
+            alertPlayer?.play()
+        } catch {
+            print("❌ Failed to play alarm:", error)
+        }
+    }
+    
+    private func stopAlertSound() {
+        alertPlayer?.stop()
+        alertPlayer = nil
+    }
+    
+    private func configureAudioSession() {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setActive(true)
+        } catch {
+            print("❌ Audio session setup failed:", error)
+        }
+    }
+
 }
