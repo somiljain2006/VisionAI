@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  VisionAI
-//
-//  Created by somil jain on 24/01/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {

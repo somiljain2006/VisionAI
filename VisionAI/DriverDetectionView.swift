@@ -62,13 +62,18 @@ struct DriverDetectionView: View {
                     Spacer()
 
                     if !isActiveState {
-                        Image("person")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 45, height: 45)
-                            .padding(.trailing, 24)
-                            .shadow(radius: 2)
-                            .padding(.top, 25)
+                        NavigationLink(destination: DriverProfileView(onExit: {
+                            detector.stop()
+                        })) {
+                            Image("person")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 45, height: 45)
+                                .padding(.trailing, 24)
+                                .shadow(radius: 2)
+                                .padding(.top, 25)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding(.top, -10)
