@@ -42,7 +42,7 @@ final class EyeDetector: NSObject, ObservableObject {
         guard !isRunning else { return }
         isStarting = true
         isRunning = true
-        alertsCount = 0 // Resets session count (trip count handled in View)
+        alertsCount = 0
         sessionStart = Date()
         checkPermissionAndStart()
     }
@@ -51,7 +51,7 @@ final class EyeDetector: NSObject, ObservableObject {
         if let start = sessionStart {
             let duration = Date().timeIntervalSince(start)
             lastSessionDuration = duration
-            totalTripDuration += duration // Accumulate the time
+            totalTripDuration += duration 
         } else {
             lastSessionDuration = 0
         }

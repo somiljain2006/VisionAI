@@ -180,7 +180,7 @@ struct DriverProfileView: View {
             dismiss()
         }) {
             Text("Exit Driver Mode")
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, minHeight: 56)
                 .background(accent)

@@ -59,9 +59,9 @@ struct ModeSelectionView: View {
                                 .offset(y: 8),
                         title: "Stay focused while\nstudying",
                         points: [
-                            "Real-time movement",
+                            "Real-time motion",
                             "Laziness detection",
-                            "Safety-first"
+                            "Focus assistance"
                         ],
                         buttonTitle: "Study Mode",
                         action: {
@@ -78,10 +78,7 @@ struct ModeSelectionView: View {
                 DriverDetectionView()
             }
             .navigationDestination(isPresented: $goToStudyMode) {
-                Text("Study Mode Coming Soon")
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(bgColor)
+                StudyFocusView()
             }
         }
     }
@@ -115,8 +112,11 @@ struct ModeSelectionView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(points, id: \.self) { point in
                             Text("• \(point)")
-                                .font(.system(size: 18))
+                                .font(.system(size: 16))
                                 .foregroundColor(.white)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .padding(.top, 12)
