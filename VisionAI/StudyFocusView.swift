@@ -11,6 +11,7 @@ struct StudyFocusView: View {
     @State private var isUsingCustomTime: Bool = false
     @State private var selectedSeconds: Int = 0
     @State private var customSeconds: Int = 0
+    @State private var isPomodoroEnabled: Bool = true
     
     private let pickerRowHeight: CGFloat = 80
     private let pickerWidth: CGFloat = 120
@@ -35,7 +36,7 @@ struct StudyFocusView: View {
                     }
                     .padding(.trailing, 24)
                 }
-                .padding(.top, -20)
+                .padding(.top, 8)
                 
                 Spacer()
             }
@@ -124,12 +125,30 @@ struct StudyFocusView: View {
                     durationChip(60)
                 }
 
-                Spacer(minLength: 160)
+                HStack {
+                    Text("Pomodoro Timer")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                    
+                    Toggle("", isOn: $isPomodoroEnabled)
+                        .labelsHidden()
+                        .toggleStyle(SwitchToggleStyle(tint: buttonColor))
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .frame(width: 260)
+                .background(Color.black.opacity(0.25))
+                .cornerRadius(16)
+
+                Spacer(minLength: 120)
             }
 
             VStack {
                 Spacer()
                 Button {
+                    // Action
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: "play.fill")
