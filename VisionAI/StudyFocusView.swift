@@ -1,6 +1,8 @@
 import SwiftUI
+import AVFoundation
 
 struct StudyFocusView: View {
+    @Environment(\.dismiss) private var dismiss
 
     private let bgColor = Color(hex: "#2D3135")
     private let accent = Color(hex: "#8B8CFB")
@@ -8,166 +10,191 @@ struct StudyFocusView: View {
 
     @State private var selectedMinutes: Int = 25
     @State private var customMinutes: Int = 25
-    @State private var isUsingCustomTime: Bool = false
     @State private var selectedSeconds: Int = 0
     @State private var customSeconds: Int = 0
     @State private var isPomodoroEnabled: Bool = true
-    
+
     private let pickerRowHeight: CGFloat = 80
-    private let pickerWidth: CGFloat = 120
+    private let pickerWidth: CGFloat = 104
+
+    private let backButtonOffset: CGFloat = 52
+
+    @AppStorage("profileImageData") private var profileImageData: Data?
 
     var body: some View {
         ZStack {
             bgColor.ignoresSafeArea()
 
-            VStack {
-                HStack {
-                    Spacer()
-                    Button {
-                    } label: {
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white)
-                            .background(
-                                Circle()
-                                    .fill(Color.white.opacity(0.08))
-                                    .frame(width: 44, height: 44)
-                            )
-                    }
-                    .padding(.trailing, 24)
-                }
-                .padding(.top, 8)
-                
-                Spacer()
-            }
-            .zIndex(100)
-            
-            VStack(spacing: 28) {
-
-                Spacer(minLength: 60)
-                
-                Text(breakText)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(accent)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
-                    .background(Capsule().fill(accent.opacity(0.15)))
-                    .animation(.easeInOut, value: selectedMinutes)
-
+            VStack(spacing: 0) {
                 ZStack {
-                    HStack(spacing: -10) {
-                        MinuteWheelPicker(range: 25...60, selection: $customMinutes, rowHeight: pickerRowHeight)
-                            .frame(width: pickerWidth, height: 180)
-                            .clipped()
-                            .contentShape(Rectangle())
-                            .onChange(of: customMinutes) { _, newValue in
-                                let clamped = min(max(newValue, 25), 60)
-                                if clamped != selectedMinutes {
-                                    selectedMinutes = clamped
-                                }
-                                if clamped != customMinutes {
-                                    customMinutes = clamped
-                                }
-                                isUsingCustomTime = true
-                            }
-
-                        Text(":")
-                            .font(.system(size: 50, weight: .bold))
-                            .foregroundColor(.white)
-                            .offset(y: -4)
-                            .zIndex(10)
-
-                        MinuteWheelPicker(range: 0...59, selection: $customSeconds, rowHeight: pickerRowHeight)
-                            .frame(width: pickerWidth, height: 180)
-                            .clipped()
-                            .contentShape(Rectangle())
-                            .onChange(of: customSeconds) { _, newValue in
-                                selectedSeconds = newValue
-                                isUsingCustomTime = true
-                            }
+                    if isPomodoroEnabled {
+                        pomodoroContent
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                    } else {
+                        DriverStartUI(onStart: { print("Driver detection started") })
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
-                    .frame(width: 280, height: 180)
-                    .mask(Circle().frame(width: 250, height: 250))
-                    .overlay(
-                        VStack {
-                            LinearGradient(
-                                colors: [bgColor, bgColor.opacity(0.0)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: 50)
-                            Spacer()
-                            LinearGradient(
-                                colors: [bgColor.opacity(0.0), bgColor],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: 50)
-                        }
-                        .allowsHitTesting(false)
-                    )
-
-                    Circle()
-                        .stroke(accent.opacity(0.35), lineWidth: 10)
-                        .frame(width: 280, height: 280)
                 }
-                
-                Text("“The successful warrior is the average person, with laser-like focus.”")
-                    .font(.system(size: 15))
-                    .foregroundColor(.white.opacity(0.65))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 32)
+                .animation(.easeInOut(duration: 0.35), value: isPomodoroEnabled)
 
-                HStack(spacing: 14) {
-                    durationChip(25)
-                    durationChip(45)
-                    durationChip(60)
-                }
-
-                HStack {
-                    Text("Pomodoro Timer")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    Toggle("", isOn: $isPomodoroEnabled)
-                        .labelsHidden()
-                        .toggleStyle(SwitchToggleStyle(tint: buttonColor))
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .frame(width: 260)
-                .background(Color.black.opacity(0.25))
-                .cornerRadius(16)
-
-                Spacer(minLength: 120)
-            }
-
-            VStack {
                 Spacer()
-                Button {
-                    // Action
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "play.fill")
-                        Text("Start detection")
+
+                VStack(spacing: 18) {
+                    HStack {
+                        Text(isPomodoroEnabled ? "Pomodoro Timer" : "Pomodoro Timer")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.white)
+
+                        Spacer()
+
+                        Toggle("", isOn: $isPomodoroEnabled)
+                            .labelsHidden()
+                            .toggleStyle(SwitchToggleStyle(tint: buttonColor))
                     }
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(buttonColor)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .frame(width: 320)
+                    .background(Color.black.opacity(0.25))
                     .cornerRadius(16)
-                    .shadow(radius: 6)
+
+                    Button {
+                        if isPomodoroEnabled {
+                            print("Pomodoro start")
+                        } else {
+                            print("Driver start")
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "play.fill")
+                            Text("Start detection")
+                        }
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(buttonColor)
+                        .cornerRadius(16)
+                        .shadow(radius: 6)
+                    }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 36)
                 }
             }
+
+            topBar
+                .ignoresSafeArea(edges: .top)
+                .zIndex(999)
+        }
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) { EmptyView() }
         }
         .onAppear {
             selectedMinutes = min(max(selectedMinutes, 25), 60)
             customMinutes = selectedMinutes
+        }
+    }
+
+    private var topBar: some View {
+        GeometryReader { geo in
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 44, height: 44)
+                        .shadow(radius: 6)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.leading, 16)
+
+                Spacer()
+
+                Button {
+                    // profile tapped
+                } label: {
+                    Group {
+                        if let data = profileImageData,
+                           let ui = UIImage(data: data) {
+                            Image(uiImage: ui)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            Image(systemName: "person.fill")
+                                .resizable()
+                                .scaledToFit()
+                                .padding(10)
+                        }
+                    }
+                    .frame(width: 48, height: 48)
+                    .clipShape(Circle())
+                    .background(Circle().fill(Color.white.opacity(0.08)))
+                    .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.25), radius: 6, y: 4)
+                }
+                .padding(.trailing, 16)
+            }
+            .padding(.top, geo.safeAreaInsets.top + backButtonOffset)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    private var pomodoroContent: some View {
+        VStack {
+            Spacer(minLength: 60)
+
+            Text(breakText)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(accent)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .background(Capsule().fill(accent.opacity(0.15)))
+                .padding(.bottom, 15)
+
+            ZStack {
+                Circle()
+                    .stroke(accent.opacity(0.35), lineWidth: 10)
+                    .frame(width: 220, height: 220)
+
+                HStack(spacing: -14) {
+                    MinuteWheelPicker(range: 25...60, selection: $customMinutes, rowHeight: pickerRowHeight)
+                        .frame(width: pickerWidth, height: 180)
+                        .clipped()
+                        .onChange(of: customMinutes) { _, newValue in
+                            let clamped = min(max(newValue, 25), 60)
+                            selectedMinutes = clamped
+                            customMinutes = clamped
+                        }
+
+                    Text(":")
+                        .font(.system(size: 42, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.45))
+                        .baselineOffset(6)
+
+                    MinuteWheelPicker(range: 0...59, selection: $customSeconds, rowHeight: pickerRowHeight)
+                        .frame(width: pickerWidth, height: 180)
+                        .clipped()
+                }
+                .frame(width: 280, height: 180)
+                .mask(Circle().frame(width: 250, height: 250))
+            }
+
+            Text("“The successful warrior is the average person, with laser-like focus.”")
+                .font(.system(size: 15))
+                .foregroundColor(.white.opacity(0.65))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.top, 18)
+
+            HStack(spacing: 14) {
+                durationChip(25)
+                durationChip(45)
+                durationChip(60)
+            }
+            .padding(.top, 18)
+
+            Spacer(minLength: 40)
         }
     }
 
@@ -182,7 +209,6 @@ struct StudyFocusView: View {
             selectedSeconds = 0
             customMinutes = minutes
             customSeconds = 0
-            isUsingCustomTime = false
         } label: {
             Text("\(minutes)m")
                 .font(.system(size: 15, weight: .medium))
@@ -194,7 +220,7 @@ struct StudyFocusView: View {
                 )
         }
     }
-    
+
     private func breakMinutes(for focusMinutes: Int) -> Int {
         let raw = 0.2857 * Double(focusMinutes) - 2.14
         return max(5, Int(floor(raw)))
