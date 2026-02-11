@@ -16,6 +16,8 @@ struct StudyFocusView: View {
     @State private var showDetection = false
     @State private var avatarImage: UIImage? = nil
     @State private var isViewReady = false
+    @State private var showProfile = false
+    @State private var dragOffset: CGFloat = 0
 
     private let pickerRowHeight: CGFloat = 80
     private let pickerWidth: CGFloat = 104
@@ -49,7 +51,7 @@ struct StudyFocusView: View {
 
                 VStack(spacing: 18) {
                     HStack {
-                        Text(isPomodoroEnabled ? "Pomodoro Timer" : "Driver Detection")
+                        Text(isPomodoroEnabled ? "Pomodoro Timer" : "Pomodoro Timer")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundColor(.white)
 
@@ -94,6 +96,43 @@ struct StudyFocusView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) { EmptyView() }
         }
+        .gesture(
+            DragGesture(minimumDistance: 25, coordinateSpace: .local)
+                .onChanged { value in
+                    guard canSwipe else { return }
+
+                    if abs(value.translation.width) > abs(value.translation.height) {
+                        dragOffset = value.translation.width
+                    }
+                }
+                .onEnded { value in
+                    guard canSwipe else {
+                        dragOffset = 0
+                        return
+                    }
+
+                    let horizontalDrag = value.translation.width
+                    let swipeThreshold: CGFloat = 120
+
+                    if horizontalDrag > swipeThreshold {
+                        if isPomodoroEnabled {
+                            withAnimation(.easeInOut) {
+                                isPomodoroEnabled = false
+                            }
+                        } else {
+                            dismiss()
+                        }
+                    } else if horizontalDrag < -swipeThreshold {
+                        if !isPomodoroEnabled {
+                            withAnimation(.easeInOut) {
+                                isPomodoroEnabled = true
+                            }
+                        }
+                    }
+
+                    dragOffset = 0
+                }
+        )
         .onAppear {
             selectedMinutes = min(max(selectedMinutes, 25), 60)
             customMinutes = selectedMinutes
@@ -119,6 +158,10 @@ struct StudyFocusView: View {
                 launchedFromStudy: true
             )
         }
+        .navigationDestination(isPresented: $showProfile) {
+            DriverProfileView()
+        }
+
     }
 
     private var topBar: some View {
@@ -137,7 +180,7 @@ struct StudyFocusView: View {
                 Spacer()
 
                 Button {
-                    // profile tapped
+                    showProfile = true
                 } label: {
                     Group {
                         if let ui = avatarImage {
@@ -253,5 +296,9 @@ struct StudyFocusView: View {
     private func breakMinutes(for focusMinutes: Int) -> Int {
         let raw = 0.2857 * Double(focusMinutes) - 2.14
         return max(5, Int(floor(raw)))
+    }
+    
+    private var canSwipe: Bool {
+        !showDetection && !showProfile
     }
 }

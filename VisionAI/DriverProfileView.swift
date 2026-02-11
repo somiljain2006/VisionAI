@@ -9,10 +9,11 @@ struct DriverProfileView: View {
     @State private var showShareSheet = false
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
+    @State private var isEditingName = false
+    @FocusState private var isNameFocused: Bool
 
     @AppStorage("profileImageData") private var profileImageData: Data?
-    @AppStorage("userName") private var userName: String = ""
-    @AppStorage("userEmail") private var userEmail: String = ""
+    @AppStorage("userName") private var userName: String = "Driver"
     var onExit: (() -> Void)? = nil
 
     private let bgColor = Color(hex: "#2D3135")
@@ -108,13 +109,35 @@ struct DriverProfileView: View {
                 .offset(x: -6, y: -6)
             }
 
-            Text(userName.isEmpty ? "Driver" : userName)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
+            if isEditingName {
+                TextField("Driver", text: $userName)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .focused($isNameFocused)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        finishEditingName()
+                    }
+                    .onAppear {
+                        isNameFocused = true
+                    }
+            } else {
+                Button {
+                    isEditingName = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(userName.isEmpty ? "Driver" : userName)
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
 
-            Text(userEmail.isEmpty ? "—" : userEmail)
-                .font(.system(size: 15))
-                .foregroundColor(cardTextColor)
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                }
+                .buttonStyle(.plain)
+            }
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(image: $selectedImage)
@@ -194,61 +217,32 @@ struct DriverProfileView: View {
             Color.black.opacity(0.45)
                 .ignoresSafeArea()
                 .onTapGesture {
-                    withAnimation {
-                        showReportDialog = false
-                    }
+                    withAnimation { showReportDialog = false }
                 }
 
             VStack(spacing: 20) {
                 HStack {
-                    Text("Report Issue at")
+                    Text("Report Issue")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
 
                     Spacer()
 
                     Button {
-                        withAnimation {
-                            showReportDialog = false
-                        }
+                        withAnimation { showReportDialog = false }
                     } label: {
                         Image(systemName: "xmark")
                             .foregroundColor(.white.opacity(0.7))
                     }
                 }
 
-                HStack {
-                    Text(userEmail.isEmpty ? "email not provided" : userEmail)
-                        .font(.system(size: 18))
-                        .foregroundColor(.white)
-
-                    Spacer()
-
-                    Button {
-                        copyEmailToClipboard()
-                    } label: {
-                        Image("copy")
-                            .foregroundColor(.white.opacity(0.85))
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                )
-                
-                if showCopiedToast {
-                    Text("Copied")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.mint)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
+                Text("Please report issues via GitHub or the App Store.")
+                    .font(.system(size: 16))
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
 
                 Button {
-                    withAnimation {
-                        showReportDialog = false
-                    }
+                    withAnimation { showReportDialog = false }
                 } label: {
                     Text("Continue")
                         .font(.system(size: 16, weight: .semibold))
@@ -269,29 +263,18 @@ struct DriverProfileView: View {
         }
     }
     
-    private func copyEmailToClipboard() {
-        guard !userEmail.isEmpty else { return }
-
-        UIPasteboard.general.string = userEmail
-
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
-
-        withAnimation(.easeInOut) {
-            showCopiedToast = true
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            withAnimation(.easeInOut) {
-                showCopiedToast = false
-            }
-        }
-    }
-    
     private var shareItems: [Any] {
         let message = "Check out VisionAI – Stay awake, stay focused"
         let appLink = URL(string: "https://github.com/somiljain2006/VisionAI")!
         return [message, appLink]
+    }
+    
+    private func finishEditingName() {
+        userName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if userName.isEmpty {
+            userName = "Driver"
+        }
+        isEditingName = false
     }
 
 }
@@ -304,3 +287,4 @@ struct DriverProfileView_Previews: PreviewProvider {
         .previewDevice("iPhone 14 Pro")
     }
 }
+

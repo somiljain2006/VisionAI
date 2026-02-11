@@ -14,6 +14,7 @@ struct DriverDetectionView: View {
     @State private var tripAlerts = 0
     @State private var alertTimer: Timer?
     @State private var alertPlayer: AVAudioPlayer?
+    @State private var dragOffset: CGFloat = 0
     
     @AppStorage("profileImageData") private var profileImageData: Data?
 
@@ -180,6 +181,29 @@ struct DriverDetectionView: View {
                     .zIndex(200)
             }
         }
+        .offset(x: dragOffset)
+        .animation(.interactiveSpring(), value: dragOffset)
+        .gesture(
+            DragGesture(minimumDistance: 20)
+                .onChanged { value in
+                    guard canSwipeBack else { return }
+                    if value.translation.width > 0 {
+                        dragOffset = value.translation.width
+                    }
+                }
+                .onEnded { value in
+                    guard canSwipeBack else {
+                        dragOffset = 0
+                        return
+                    }
+
+                    if value.translation.width > 120 {
+                        stopDetectionAndDismiss()
+                    }
+
+                    dragOffset = 0
+                }
+        )
         .onAppear {
             configureAudioSession()
         }
@@ -381,6 +405,13 @@ struct DriverDetectionView: View {
         } catch {
             print("❌ Audio session setup failed:", error)
         }
+    }
+    
+    private var canSwipeBack: Bool {
+        !detector.isRunning &&
+        !showingAlert &&
+        !showAnalytics &&
+        !isRestarting
     }
 
 }
