@@ -12,7 +12,8 @@ struct StudyFocusView: View {
     @State private var customMinutes: Int = 25
     @State private var selectedSeconds: Int = 0
     @State private var customSeconds: Int = 0
-    @State private var isPomodoroEnabled: Bool = true
+    @State private var isPomodoroEnabled: Bool = false
+    @State private var showDetection = false
 
     private let pickerRowHeight: CGFloat = 80
     private let pickerWidth: CGFloat = 104
@@ -41,7 +42,7 @@ struct StudyFocusView: View {
 
                 VStack(spacing: 18) {
                     HStack {
-                        Text(isPomodoroEnabled ? "Pomodoro Timer" : "Pomodoro Timer")
+                        Text(isPomodoroEnabled ? "Pomodoro Timer" : "Driver Detection")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundColor(.white)
 
@@ -58,11 +59,7 @@ struct StudyFocusView: View {
                     .cornerRadius(16)
 
                     Button {
-                        if isPomodoroEnabled {
-                            print("Pomodoro start")
-                        } else {
-                            print("Driver start")
-                        }
+                        showDetection = true
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "play.fill")
@@ -92,11 +89,19 @@ struct StudyFocusView: View {
             selectedMinutes = min(max(selectedMinutes, 25), 60)
             customMinutes = selectedMinutes
         }
+        .navigationDestination(isPresented: $showDetection) {
+            let totalSeconds = (selectedMinutes * 60) + selectedSeconds
+            DriverDetectionView(
+                autoStart: true,
+                pomodoroDuration: isPomodoroEnabled ? totalSeconds : nil
+            )
+        }
     }
 
     private var topBar: some View {
         GeometryReader { geo in
             HStack {
+                // Back
                 Button {
                     dismiss()
                 } label: {
@@ -104,9 +109,7 @@ struct StudyFocusView: View {
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white)
                         .frame(width: 44, height: 44)
-                        .shadow(radius: 6)
                 }
-                .buttonStyle(PlainButtonStyle())
                 .padding(.leading, 16)
 
                 Spacer()
@@ -131,14 +134,14 @@ struct StudyFocusView: View {
                     .clipShape(Circle())
                     .background(Circle().fill(Color.white.opacity(0.08)))
                     .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                    .shadow(color: .black.opacity(0.25), radius: 6, y: 4)
                 }
                 .padding(.trailing, 16)
             }
             .padding(.top, geo.safeAreaInsets.top + backButtonOffset)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(maxWidth: .infinity, alignment: .top)
         }
     }
+
 
     private var pomodoroContent: some View {
         VStack {

@@ -6,6 +6,7 @@ struct DriverDetectionView: View {
     @Environment(\.dismiss) var dismiss
     
     @StateObject private var detector = EyeDetector()
+    @StateObject private var pomodoroTimer = PomodoroTimer()
     
     @State private var showingAlert = false
     @State private var isRestarting = false
@@ -18,6 +19,14 @@ struct DriverDetectionView: View {
 
     private let bgColor = Color(hex: "#2D3135")
     private let buttonColor = Color(hex: "#49494A")
+    
+    let autoStart: Bool
+    let pomodoroDuration: Int?
+    
+    init(autoStart: Bool = false, pomodoroDuration: Int? = nil) {
+        self.autoStart = autoStart
+        self.pomodoroDuration = pomodoroDuration
+    }
 
     private var isActiveState: Bool {
         return detector.isRunning || showingAlert || isRestarting
@@ -69,31 +78,33 @@ struct DriverDetectionView: View {
 
                     Spacer()
 
-                    if !isActiveState {
-                        NavigationLink(destination: DriverProfileView(onExit: {
-                            detector.stop()
-                        })) {
-                            Group {
-                                if let data = profileImageData,
-                                   let uiImage = UIImage(data: data) {
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFill()
-                                } else {
-                                    Image(systemName: "person.fill")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .padding(8)
-                                }
+                    if !isActiveState || detector.isRunning {
+                        HStack(spacing: 12) {
+                            
+                            if pomodoroDuration != nil {
+                                PomodoroTimerBadge(
+                                    timeText: pomodoroTimer.formattedTime(),
+                                    isRunning: pomodoroTimer.isRunning
+                                )
+                                .padding(.top, 25)
                             }
-                            .frame(width: 45, height: 45)
-                            .background(Color.white.opacity(0.12))
-                            .clipShape(Circle())
-                            .shadow(radius: 2)
-                            .padding(.trailing, 24)
-                            .padding(.top, 25)
+                            
+                            if !isActiveState {
+                                NavigationLink(destination: DriverProfileView(onExit: {
+                                    detector.stop()
+                                    pomodoroTimer.stop()
+                                })) {
+                                    profileImage
+                                        .frame(width: 45, height: 45)
+                                        .background(Color.white.opacity(0.12))
+                                        .clipShape(Circle())
+                                        .shadow(radius: 2)
+                                        .padding(.trailing, 24)
+                                        .padding(.top, 25)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
                         }
-                        .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding(.top, -10)
@@ -180,6 +191,32 @@ struct DriverDetectionView: View {
                 detector.stop()
             }
         }
+        .task(id: autoStart) {
+            if autoStart && !detector.isRunning {
+                detector.resetTrip()
+                detector.start()
+                
+                if let duration = pomodoroDuration {
+                    pomodoroTimer.start(seconds: duration)
+                }
+            }
+        }
+    }
+    
+    private var profileImage: some View {
+        Group {
+            if let data = profileImageData,
+               let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "person.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(8)
+            }
+        }
     }
 
     private func toggleDetection() {
@@ -187,6 +224,8 @@ struct DriverDetectionView: View {
             if detector.isRunning {
                 stopAlertSound()
                 detector.stop()
+                pomodoroTimer.stop()
+                
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     withAnimation(.easeInOut) {
                         showAnalytics = true
@@ -196,6 +235,9 @@ struct DriverDetectionView: View {
                 tripAlerts = 0
                 detector.resetTrip()
                 detector.start()
+                if let duration = pomodoroDuration {
+                    pomodoroTimer.reset(seconds: duration, startImmediately: true)
+                }
             }
         }
     }
