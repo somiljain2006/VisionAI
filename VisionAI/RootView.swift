@@ -3,7 +3,7 @@ import SwiftUI
 struct RootView: View {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("isSetupComplete") private var isSetupComplete = false
-    @AppStorage("isProfileComplete") private var isProfileComplete = false
+    @AppStorage("isProfileComplete") private var isProfileComplete = true
 
     @State private var flow: AppFlow = .splash
 
@@ -16,11 +16,7 @@ struct RootView: View {
                         if isSetupComplete {
                             flow = .modeSelection
                         } else if hasSeenOnboarding {
-                            if isProfileComplete {
-                                flow = .permissions
-                            } else {
-                                flow = .profileSetup
-                            }
+                            flow = .permissions
                         } else {
                             flow = .onboarding
                         }
@@ -30,17 +26,6 @@ struct RootView: View {
             case .onboarding:
                 OnboardingContainer {
                     hasSeenOnboarding = true
-                    withAnimation {
-                        if isProfileComplete {
-                            flow = .permissions
-                        } else {
-                            flow = .profileSetup
-                        }
-                    }
-                }
-
-            case .profileSetup:
-                ProfileSetupView {
                     withAnimation {
                         flow = .permissions
                     }

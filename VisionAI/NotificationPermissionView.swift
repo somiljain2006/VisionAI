@@ -47,17 +47,19 @@ struct NotificationPermissionView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Label("Drowsiness warnings", systemImage: "checkmark")
-                    Label("Pomodoro reminders", systemImage: "checkmark")
-                    Label("No promotional spam", systemImage: "checkmark")
+                HStack {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Drowsiness warnings", systemImage: "checkmark")
+                        Label("Pomodoro reminders", systemImage: "checkmark")
+                        Label("No promotional spam", systemImage: "checkmark")
+                    }
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.white)
+                    
+                    Spacer()
                 }
-                .font(.system(size: 16))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 32)
-                .padding(.leading, 32)
-                .padding(.top, -4)
+                .padding(.horizontal, 40)
+                .padding(.top, 8)
 
                 Spacer()
 

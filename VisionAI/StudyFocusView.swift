@@ -70,7 +70,7 @@ struct StudyFocusView: View {
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "play.fill")
-                            Text("Start detection")
+                            Text("Start focusing")
                         }
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)

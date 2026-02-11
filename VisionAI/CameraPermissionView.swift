@@ -48,19 +48,18 @@ struct CameraPermissionView: View {
                     .padding(.horizontal, 32)
 
                 HStack {
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Label("On-device processing", systemImage: "checkmark")
                         Label("Privacy-first design", systemImage: "checkmark")
                         Label("No photos or videos", systemImage: "checkmark")
                     }
-                    .font(.system(size: 18))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundColor(.white)
-                    .padding(.leading, 64)
 
                     Spacer()
                 }
-                .padding(.horizontal, 8)
-                .padding(.top, -4)
+                .padding(.horizontal, 40)
+                .padding(.top, 8)
 
                 Spacer()
 
