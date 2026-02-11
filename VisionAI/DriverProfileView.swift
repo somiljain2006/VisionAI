@@ -14,11 +14,20 @@ struct DriverProfileView: View {
 
     @AppStorage("profileImageData") private var profileImageData: Data?
     @AppStorage("userName") private var userName: String = "Driver"
+    @AppStorage("studyAlertSound") private var studyAlertSoundId: String = "bell"
+
     var onExit: (() -> Void)? = nil
 
     private let bgColor = Color(hex: "#2D3135")
     private let cardTextColor = Color(hex: "#BDBDBD")
     private let accent = Color(hex: "#F05650")
+    
+    let showStudyOptions: Bool
+
+    init(showStudyOptions: Bool = false, onExit: (() -> Void)? = nil) {
+        self.showStudyOptions = showStudyOptions
+        self.onExit = onExit
+    }
 
     var body: some View {
         ZStack {
@@ -152,6 +161,14 @@ struct DriverProfileView: View {
 
     private var optionsList: some View {
         VStack(spacing: 20) {
+            if showStudyOptions {
+                NavigationLink {
+                    StudyAlertSoundPickerView()
+                } label: {
+                    profileRow(title: "Choose Alert Sound", systemImage: "speaker.wave.2.fill")
+                }
+                .buttonStyle(.plain)
+            }
             Button {
                 withAnimation(.easeInOut) {
                     showReportDialog = true

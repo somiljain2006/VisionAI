@@ -159,7 +159,7 @@ struct StudyFocusView: View {
             )
         }
         .navigationDestination(isPresented: $showProfile) {
-            DriverProfileView()
+            DriverProfileView(showStudyOptions: true)
         }
 
     }

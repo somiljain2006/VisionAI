@@ -17,6 +17,7 @@ struct DriverDetectionView: View {
     @State private var dragOffset: CGFloat = 0
     
     @AppStorage("profileImageData") private var profileImageData: Data?
+    @AppStorage("studyAlertSound") private var studyAlertSoundId: String = "bell"
 
     private let bgColor = Color(hex: "#2D3135")
     private let buttonColor = Color(hex: "#49494A")
@@ -99,9 +100,14 @@ struct DriverDetectionView: View {
                             }
                             
                             if !isActiveState {
-                                NavigationLink(destination: DriverProfileView(onExit: {
-                                    stopDetectionForProfile()
-                                })) {
+                                NavigationLink(
+                                    destination: DriverProfileView(
+                                        showStudyOptions: launchedFromStudy,
+                                        onExit: {
+                                            stopDetectionForProfile()
+                                        }
+                                    )
+                                ) {
                                     profileImage
                                         .frame(width: 45, height: 45)
                                         .background(Color.white.opacity(0.12))
@@ -376,19 +382,28 @@ struct DriverDetectionView: View {
     private func playAlertSound() {
         stopAlertSound()
 
-        guard let url = Bundle.main.url(forResource: "alarm", withExtension: "wav") else {
-            print("❌ alarm.wav not found in bundle")
+        let soundFile: String
+
+        if launchedFromStudy {
+            soundFile = studyAlertSounds
+                .first(where: { $0.id == studyAlertSoundId })?
+                .fileName ?? "study_bell"
+        } else {
+            soundFile = "alarm" // DRIVER MODE (unchanged)
+        }
+
+        guard let url = Bundle.main.url(forResource: soundFile, withExtension: "wav") else {
+            print("❌ Sound file missing:", soundFile)
             return
         }
 
         do {
             alertPlayer = try AVAudioPlayer(contentsOf: url)
-            alertPlayer?.volume = 1.0
             alertPlayer?.numberOfLoops = -1
-            alertPlayer?.prepareToPlay()
+            alertPlayer?.volume = 1.0
             alertPlayer?.play()
         } catch {
-            print("❌ Failed to play alarm:", error)
+            print("❌ Failed to play alert sound:", error)
         }
     }
     
