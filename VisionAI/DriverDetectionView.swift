@@ -63,7 +63,7 @@ struct DriverDetectionView: View {
             VStack {
                 HStack {
                     if detector.isRunning {
-                        if detector.closedDuration <= 5.0 {
+                        if detector.closedDuration <= 2.5 {
                             Image("eyes-wide")
                                 .resizable()
                                 .scaledToFit()
@@ -173,6 +173,7 @@ struct DriverDetectionView: View {
             if showingAlert {
                 WakeUpScreen {
                     stopAlertSound()
+                    detector.acknowledgeAlertAndReset()
                     withAnimation(.easeOut(duration: 0.1)) {
                         showingAlert = false
                     }
@@ -220,7 +221,7 @@ struct DriverDetectionView: View {
             }
         }
         .onReceive(detector.$closedDuration) { duration in
-            if duration > 5.00 && !showingAlert {
+            if duration > 2.5 && !showingAlert {
                 print("🚨 Eyes closed for \(duration)s — TRIGGER ALARM")
                 tripAlerts += 1
                 showingAlert = true
@@ -382,23 +383,29 @@ struct DriverDetectionView: View {
     private func playAlertSound() {
         stopAlertSound()
 
-        let soundFile: String
+        var url: URL?
 
         if launchedFromStudy {
-            soundFile = studyAlertSounds
-                .first(where: { $0.id == studyAlertSoundId })?
-                .fileName ?? "study_bell"
+            if studyAlertSoundId == StudyAlertStorage.customSoundId {
+                url = StudyAlertStorage.customSoundURL
+            } else {
+                let file = studyAlertSounds
+                    .first(where: { $0.id == studyAlertSoundId })?
+                    .fileName ?? "study_bell"
+
+                url = Bundle.main.url(forResource: file, withExtension: "wav")
+            }
         } else {
-            soundFile = "alarm" // DRIVER MODE (unchanged)
+            url = Bundle.main.url(forResource: "alarm", withExtension: "wav")
         }
 
-        guard let url = Bundle.main.url(forResource: soundFile, withExtension: "wav") else {
-            print("❌ Sound file missing:", soundFile)
+        guard let soundURL = url else {
+            print("❌ Alert sound not found")
             return
         }
 
         do {
-            alertPlayer = try AVAudioPlayer(contentsOf: url)
+            alertPlayer = try AVAudioPlayer(contentsOf: soundURL)
             alertPlayer?.numberOfLoops = -1
             alertPlayer?.volume = 1.0
             alertPlayer?.play()

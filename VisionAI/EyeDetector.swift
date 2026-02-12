@@ -15,7 +15,7 @@ final class EyeDetector: NSObject, ObservableObject {
     @Published private(set) var lastSessionAlerts: Int = 0
 
     var onEyesClosedLong: (() -> Void)?
-    private let closedThreshold: TimeInterval = 5.0
+    private let closedThreshold: TimeInterval = 2.5
     private var lastFaceSeen: Date?
 
     var session: AVCaptureSession?
@@ -153,7 +153,8 @@ final class EyeDetector: NSObject, ObservableObject {
             } else {
                 self.closedDuration = Date().timeIntervalSince(self.lastClosedStart!)
                 
-                if self.closedDuration >= self.closedThreshold {
+                if self.closedDuration >= self.closedThreshold && !self.alertedWhileClosed {
+                    self.alertedWhileClosed = true
                     self.onEyesClosedLong?()
                 }
             }
@@ -218,7 +219,8 @@ extension EyeDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
                     self.lastClosedStart = Date()
                 } else {
                     self.closedDuration = Date().timeIntervalSince(self.lastClosedStart!)
-                    if self.closedDuration >= self.closedThreshold {
+                    if self.closedDuration >= self.closedThreshold && !self.alertedWhileClosed {
+                        self.alertedWhileClosed = true
                         self.onEyesClosedLong?()
                     }
                 }
@@ -230,16 +232,25 @@ extension EyeDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
                 self.eyesOpen = true
                 self.lastClosedStart = nil
                 self.closedDuration = 0
+                self.alertedWhileClosed = false 
             } else {
                 if self.lastClosedStart == nil {
                     self.lastClosedStart = Date()
                 }
                 self.closedDuration = Date().timeIntervalSince(self.lastClosedStart!)
                 self.eyesOpen = false
-                if self.closedDuration >= self.closedThreshold {
+                if self.closedDuration >= self.closedThreshold && !self.alertedWhileClosed {
+                    self.alertedWhileClosed = true
                     self.onEyesClosedLong?()
                 }
             }
         }
     }
+    
+    func acknowledgeAlertAndReset() {
+        alertedWhileClosed = true
+        lastClosedStart = nil
+        closedDuration = 0
+    }
+
 }
