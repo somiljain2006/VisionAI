@@ -3,6 +3,7 @@ import AVFoundation
 import Vision
 import Combine
 
+@MainActor
 final class EyeDetector: NSObject, ObservableObject {
     @Published var isRunning: Bool = false
     @Published var eyesOpen: Bool = true
@@ -18,7 +19,7 @@ final class EyeDetector: NSObject, ObservableObject {
     private let closedThreshold: TimeInterval = 2.5
     private var lastFaceSeen: Date?
 
-    var session: AVCaptureSession?
+    nonisolated(unsafe) var session: AVCaptureSession?
     private let videoQueue = DispatchQueue(label: "vision.video.queue")
     private var lastClosedStart: Date?
     private var lastFrameTime: Date?
@@ -39,30 +40,39 @@ final class EyeDetector: NSObject, ObservableObject {
     }()
     
     func start() {
-        guard !isRunning else { return }
-        isStarting = true
-        isRunning = true
-        alertsCount = 0
-        sessionStart = Date()
+        DispatchQueue.main.async {
+            guard !self.isRunning else { return }
+            self.isStarting = true
+            self.isRunning = true
+            self.alertsCount = 0
+            self.sessionStart = Date()
+        }
+
         checkPermissionAndStart()
     }
 
     func stop() {
+        let duration: TimeInterval
         if let start = sessionStart {
-            let duration = Date().timeIntervalSince(start)
-            lastSessionDuration = duration
-            totalTripDuration += duration 
+            duration = Date().timeIntervalSince(start)
         } else {
-            lastSessionDuration = 0
+            duration = 0
         }
-        lastSessionAlerts = alertsCount
-        lastClosedStart = nil
-        closedDuration = 0
-        eyesOpen = true
-        isStarting = false
-        isRunning = false
-        alertedWhileClosed = false
-        sessionStart = nil
+
+        DispatchQueue.main.async {
+            self.lastSessionDuration = duration
+            self.totalTripDuration += duration
+            self.lastSessionAlerts = self.alertsCount
+
+            self.lastClosedStart = nil
+            self.closedDuration = 0
+            self.eyesOpen = true
+            self.isStarting = false
+            self.isRunning = false
+            self.alertedWhileClosed = false
+            self.sessionStart = nil
+        }
+
         if let session = session, session.isRunning {
             session.stopRunning()
         }
@@ -252,5 +262,8 @@ extension EyeDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
         lastClosedStart = nil
         closedDuration = 0
     }
-
+    
+    nonisolated private func startCaptureSession(_ session: AVCaptureSession) {
+            session.startRunning()
+    }
 }

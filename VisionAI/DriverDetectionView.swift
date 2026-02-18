@@ -368,14 +368,14 @@ struct DriverDetectionView: View {
     }
     
     private func startDetectorSafe() {
-        DispatchQueue.global(qos: .userInitiated).async {
-            self.detector.start()
+        Task { @MainActor in
+            detector.start()
         }
     }
     
     private func stopDetectorSafe() {
-        DispatchQueue.global(qos: .userInitiated).async {
-            self.detector.stop()
+        Task { @MainActor in
+            detector.stop()
         }
     }
     
