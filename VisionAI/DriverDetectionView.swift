@@ -57,115 +57,117 @@ struct DriverDetectionView: View {
     }
 
     var body: some View {
-        ZStack {
-            mainDetectionContent
-                .blur(radius: isBreakActive ? 15 : 0)
-                .animation(.easeInOut(duration: 0.5), value: isBreakActive)
-
-            if showingAlert {
-                WakeUpScreen {
-                    stopAlertSound()
-                    detector.acknowledgeAlertAndReset()
-                    withAnimation(.easeOut(duration: 0.1)) {
-                        showingAlert = false
+        if #available(iOS 17.0, *) {
+            ZStack {
+                mainDetectionContent
+                    .blur(radius: isBreakActive ? 15 : 0)
+                    .animation(.easeInOut(duration: 0.5), value: isBreakActive)
+                
+                if showingAlert {
+                    WakeUpScreen {
+                        stopAlertSound()
+                        detector.acknowledgeAlertAndReset()
+                        withAnimation(.easeOut(duration: 0.1)) {
+                            showingAlert = false
+                        }
+                        startDetectorSafe()
                     }
-                    startDetectorSafe()
+                    .transition(.opacity)
+                    .zIndex(100)
                 }
-                .transition(.opacity)
-                .zIndex(100)
+                
+                if isBreakActive {
+                    breakView
+                        .zIndex(150)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                }
+                
+                if showAnalytics {
+                    analyticsView
+                        .zIndex(200)
+                }
             }
-            
-            if isBreakActive {
-                breakView
-                    .zIndex(150)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
-            
-            if showAnalytics {
-                analyticsView
-                    .zIndex(200)
-            }
-        }
-        .offset(x: dragOffset)
-        .animation(.interactiveSpring(), value: dragOffset)
-        .gesture(
-            DragGesture(minimumDistance: 20)
-                .onChanged { value in
-                    guard canSwipeBack else { return }
-                    if value.translation.width > 0 {
-                        dragOffset = value.translation.width
+            .offset(x: dragOffset)
+            .animation(.interactiveSpring(), value: dragOffset)
+            .gesture(
+                DragGesture(minimumDistance: 20)
+                    .onChanged { value in
+                        guard canSwipeBack else { return }
+                        if value.translation.width > 0 {
+                            dragOffset = value.translation.width
+                        }
                     }
-                }
-                .onEnded { value in
-                    guard canSwipeBack else {
+                    .onEnded { value in
+                        guard canSwipeBack else {
+                            dragOffset = 0
+                            return
+                        }
+                        
+                        if value.translation.width > 120 {
+                            stopDetectionAndDismiss()
+                        }
+                        
                         dragOffset = 0
-                        return
                     }
-
-                    if value.translation.width > 120 {
-                        stopDetectionAndDismiss()
+            )
+            .onAppear {
+                configureAudioSession()
+                if autoStart && !hasAttemptedAutoStart {
+                    hasAttemptedAutoStart = true
+                    detector.resetTrip()
+                    startDetectorSafe()
+                    
+                    if let duration = pomodoroDuration {
+                        pomodoroTimer.start(seconds: duration)
                     }
-
-                    dragOffset = 0
-                }
-        )
-        .onAppear {
-            configureAudioSession()
-            if autoStart && !hasAttemptedAutoStart {
-                hasAttemptedAutoStart = true
-                detector.resetTrip()
-                startDetectorSafe()
-                
-                if let duration = pomodoroDuration {
-                    pomodoroTimer.start(seconds: duration)
                 }
             }
-        }
-        .navigationBarBackButtonHidden(true)
-        .onChange(of: detector.isRunning) { _, newValue in
-            if newValue {
-                isRestarting = false
-            }
-        }
-        .onChange(of: pomodoroTimer.remainingSeconds) { _, newValue in
-            if pomodoroDuration != nil &&
-               newValue == 0 &&
-               !isBreakActive &&
-               !showAnalytics {
-
-                startBreakMode()
-            }
-        }
-        .onReceive(detector.$closedDuration) { duration in
-            guard !isPaused else { return }
-            if duration > 2.5 && !showingAlert {
-                print("🚨 Eyes closed for \(duration)s — TRIGGER ALARM")
-                tripAlerts += 1
-                showingAlert = true
-                playAlertSound()
-                stopDetectorSafe()
-            }
-        }
-        .task(id: autoStart) {
-            if autoStart && !detector.isRunning {
-                detector.resetTrip()
-                startDetectorSafe()
-                
-                if let duration = pomodoroDuration {
-                    pomodoroTimer.start(seconds: duration)
+            .navigationBarBackButtonHidden(true)
+            .onChange(of: detector.isRunning) { _, newValue in
+                if newValue {
+                    isRestarting = false
                 }
             }
-        }
-        .task {
-            while !Task.isCancelled {
-                // Wait for 5 seconds (5 billion nanoseconds)
-                try? await Task.sleep(nanoseconds: 5_000_000_000)
-                
-                // Animate to the next tip
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    currentTipIndex = (currentTipIndex + 1) % detectionTips.count
+            .onChange(of: pomodoroTimer.remainingSeconds) { _, newValue in
+                if pomodoroDuration != nil &&
+                    newValue == 0 &&
+                    !isBreakActive &&
+                    !showAnalytics {
+                    
+                    startBreakMode()
                 }
             }
+            .onReceive(detector.$closedDuration) { duration in
+                guard !isPaused else { return }
+                if duration > 2.5 && !showingAlert {
+                    print("Eyes closed for \(duration)s — TRIGGER ALARM")
+                    tripAlerts += 1
+                    showingAlert = true
+                    playAlertSound()
+                    stopDetectorSafe()
+                }
+            }
+            .task(id: autoStart) {
+                if autoStart && !detector.isRunning {
+                    detector.resetTrip()
+                    startDetectorSafe()
+                    
+                    if let duration = pomodoroDuration {
+                        pomodoroTimer.start(seconds: duration)
+                    }
+                }
+            }
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 5_000_000_000)
+                    
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        currentTipIndex = (currentTipIndex + 1) % detectionTips.count
+                    }
+                }
+            }
+        } else {
+            // Fallback on earlier versions
         }
     }
     
@@ -180,7 +182,6 @@ struct DriverDetectionView: View {
                     .foregroundColor(.white.opacity(0.9))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    // The ID forces SwiftUI to see this as a "new" text view, triggering the fade
                     .id(currentTipIndex)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
@@ -376,11 +377,15 @@ struct DriverDetectionView: View {
                     .foregroundColor(.white)
                     .padding(.bottom, 20)
                 
-                Text(formatBreakTime(breakTimeRemaining))
-                    .font(.system(size: 80, weight: .light))
-                    .fontDesign(.rounded)
-                    .foregroundColor(accentColor)
-                    .shadow(color: accentColor.opacity(0.3), radius: 10)
+                if #available(iOS 16.1, *) {
+                    Text(formatBreakTime(breakTimeRemaining))
+                        .font(.system(size: 80, weight: .light))
+                        .fontDesign(.rounded)
+                        .foregroundColor(accentColor)
+                        .shadow(color: accentColor.opacity(0.3), radius: 10)
+                } else {
+                    // Fallback on earlier versions
+                }
                 
                 Text("Relax and recharge your mind.")
                     .font(.system(size: 17, weight: .medium))
@@ -602,38 +607,45 @@ struct DriverDetectionView: View {
     }
     
     private func playAlertSound() {
-        stopAlertSound()
+            stopAlertSound()
 
-        var url: URL?
-
-        if launchedFromStudy {
-            if studyAlertSoundId == StudyAlertStorage.customSoundId {
-                url = StudyAlertStorage.customSoundURL
+            if let allWavs = Bundle.main.urls(forResourcesWithExtension: "wav", subdirectory: nil) {
+                print("WAV files the app can see: \(allWavs.map { $0.lastPathComponent })")
             } else {
-                let file = studyAlertSounds
-                    .first(where: { $0.id == studyAlertSoundId })?
-                    .fileName ?? "study_bell"
-
-                url = Bundle.main.url(forResource: file, withExtension: "wav")
+                print("No WAV files found in the bundle at all!")
             }
-        } else {
-            url = Bundle.main.url(forResource: "alarm", withExtension: "wav")
-        }
 
-        guard let soundURL = url else {
-            print("❌ Alert sound not found")
-            return
-        }
+            var url: URL?
 
-        do {
-            alertPlayer = try AVAudioPlayer(contentsOf: soundURL)
-            alertPlayer?.numberOfLoops = -1
-            alertPlayer?.volume = 1.0
-            alertPlayer?.play()
-        } catch {
-            print("❌ Failed to play alert sound:", error)
+            if launchedFromStudy {
+                if studyAlertSoundId == StudyAlertStorage.customSoundId {
+                    url = StudyAlertStorage.customSoundURL
+                } else {
+                    let file = studyAlertSounds
+                        .first(where: { $0.id == studyAlertSoundId })?
+                        .fileName ?? "study_bell"
+
+                    url = Bundle.main.url(forResource: file, withExtension: "wav")
+                }
+            } else {
+                url = Bundle.main.url(forResource: "alarm", withExtension: "wav")
+            }
+
+            guard let soundURL = url else {
+                print("Alert sound URL is nil. The app still can't find the file.")
+                return
+            }
+
+            do {
+                alertPlayer = try AVAudioPlayer(contentsOf: soundURL)
+                alertPlayer?.numberOfLoops = -1
+                alertPlayer?.volume = 1.0
+                alertPlayer?.play()
+                print("SUCCESS: The sound is actively playing!")
+            } catch {
+                print("Failed to play alert sound. Error:", error)
+            }
         }
-    }
     
     private func playAlertOnce() {
         stopAlertSound()
@@ -655,7 +667,7 @@ struct DriverDetectionView: View {
         }
 
         guard let soundURL = url else {
-            print("❌ Alert sound not found for one-shot")
+            print("Alert sound not found for one-shot")
             return
         }
 
@@ -672,7 +684,7 @@ struct DriverDetectionView: View {
             }
             
         } catch {
-            print("❌ Failed to play one-shot alert sound:", error)
+            print("Failed to play one-shot alert sound:", error)
         }
     }
     
@@ -687,7 +699,7 @@ struct DriverDetectionView: View {
             try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try session.setActive(true)
         } catch {
-            print("❌ Audio session setup failed:", error)
+            print("Audio session setup failed:", error)
         }
     }
     
@@ -696,7 +708,7 @@ struct DriverDetectionView: View {
         !showingAlert &&
         !showAnalytics &&
         !isRestarting &&
-        !isBreakActive 
+        !isBreakActive
     }
     
     private func pauseDetection() {

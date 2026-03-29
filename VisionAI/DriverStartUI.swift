@@ -18,10 +18,6 @@ struct DriverStartUI: View {
                     .frame(width: cameraSize, height: cameraSize)
                     .clipShape(Circle())
                     .offset(x: 1)
-                
-                Circle()
-                    .inset(by: 24)
-                    .stroke(Color.white, lineWidth: borderWidth)
 
                 Image(systemName: "camera.fill")
                     .resizable()

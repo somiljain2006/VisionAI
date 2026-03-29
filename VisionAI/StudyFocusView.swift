@@ -158,7 +158,7 @@ struct StudyFocusView: View {
             DriverDetectionView(
                 autoStart: true,
                 pomodoroDuration: isPomodoroEnabled ? totalFocusSeconds : nil,
-                breakDuration: isPomodoroEnabled ? breakSecs : nil, 
+                breakDuration: isPomodoroEnabled ? breakSecs : nil,
                 launchedFromStudy: true
             )
         }
@@ -228,28 +228,36 @@ struct StudyFocusView: View {
                     .frame(width: 220, height: 220)
 
                 HStack(spacing: -14) {
-                    MinuteWheelPicker(range: 25...60, selection: $customMinutes, rowHeight: pickerRowHeight)
-                        .frame(width: pickerWidth, height: 180)
-                        .clipped()
-                        .onChange(of: customMinutes) { _, newValue in
-                            let clamped = min(max(newValue, 25), 60)
-                            selectedMinutes = clamped
-                            customMinutes = clamped
-                        }
+                    if #available(iOS 17.0, *) {
+                        MinuteWheelPicker(range: 25...60, selection: $customMinutes, rowHeight: pickerRowHeight)
+                            .frame(width: pickerWidth, height: 180)
+                            .clipped()
+                            .onChange(of: customMinutes) { _, newValue in
+                                let clamped = min(max(newValue, 25), 60)
+                                selectedMinutes = clamped
+                                customMinutes = clamped
+                            }
+                    } else {
+                        // Fallback on earlier versions
+                    }
 
                     Text(":")
                         .font(.system(size: 42, weight: .semibold))
                         .foregroundColor(.white.opacity(0.45))
                         .baselineOffset(6)
 
-                    MinuteWheelPicker(range: 0...59, selection: $customSeconds, rowHeight: pickerRowHeight)
-                        .frame(width: pickerWidth, height: 180)
-                        .clipped()
-                        .onChange(of: customSeconds) { _, newValue in
-                            let clamped = min(max(newValue, 0), 59)
-                            selectedSeconds = clamped
-                            if customSeconds != clamped { customSeconds = clamped }
-                        }
+                    if #available(iOS 17.0, *) {
+                        MinuteWheelPicker(range: 0...59, selection: $customSeconds, rowHeight: pickerRowHeight)
+                            .frame(width: pickerWidth, height: 180)
+                            .clipped()
+                            .onChange(of: customSeconds) { _, newValue in
+                                let clamped = min(max(newValue, 0), 59)
+                                selectedSeconds = clamped
+                                if customSeconds != clamped { customSeconds = clamped }
+                            }
+                    } else {
+                        // Fallback on earlier versions
+                    }
 
                 }
                 .frame(width: 280, height: 180)

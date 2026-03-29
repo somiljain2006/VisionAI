@@ -26,19 +26,10 @@ final class EyeDetector: NSObject, ObservableObject {
     private var lastFrameTime: Date?
     private var sessionStart: Date?
     private var alertedWhileClosed: Bool = false
-
-    private lazy var faceRequest: VNDetectFaceLandmarksRequest = {
-        VNDetectFaceLandmarksRequest { [weak self] request, _ in
-            guard let self = self else { return }
-
-            if let face = (request.results as? [VNFaceObservation])?.first {
-                self.lastFaceSeen = Date()
-                self.processFaceObservation(face)
-            } else {
-                self.handleNoFace()
-            }
-        }
-    }()
+    
+    override init() {
+        super.init()
+    }
     
     func start() {
         DispatchQueue.main.async {
@@ -48,7 +39,6 @@ final class EyeDetector: NSObject, ObservableObject {
             self.alertsCount = 0
             self.sessionStart = Date()
         }
-
         checkPermissionAndStart()
     }
 
@@ -81,8 +71,8 @@ final class EyeDetector: NSObject, ObservableObject {
     }
     
     func resetTrip() {
-            totalTripDuration = 0
-            lastSessionDuration = 0
+        totalTripDuration = 0
+        lastSessionDuration = 0
     }
 
     func registerAlert() {
@@ -155,20 +145,18 @@ final class EyeDetector: NSObject, ObservableObject {
         }
     }
 
-    private func handleNoFace() {
+    func handleNoFace() {
         guard !isPaused else { return }
-        DispatchQueue.main.async {
-            self.eyesOpen = false
+        self.eyesOpen = false
+        
+        if self.lastClosedStart == nil {
+            self.lastClosedStart = Date()
+        } else {
+            self.closedDuration = Date().timeIntervalSince(self.lastClosedStart!)
             
-            if self.lastClosedStart == nil {
-                self.lastClosedStart = Date()
-            } else {
-                self.closedDuration = Date().timeIntervalSince(self.lastClosedStart!)
-                
-                if self.closedDuration >= self.closedThreshold && !self.alertedWhileClosed {
-                    self.alertedWhileClosed = true
-                    self.onEyesClosedLong?()
-                }
+            if self.closedDuration >= self.closedThreshold && !self.alertedWhileClosed {
+                self.alertedWhileClosed = true
+                self.onEyesClosedLong?()
             }
         }
     }
@@ -180,39 +168,99 @@ final class EyeDetector: NSObject, ObservableObject {
     func resumeProcessing() {
         isPaused = false
     }
+    
+    func acknowledgeAlertAndReset() {
+        alertedWhileClosed = true
+        lastClosedStart = nil
+        closedDuration = 0
+    }
+    
+    // Moved to be accessed by background thread safely
+    nonisolated private func startCaptureSession(_ session: AVCaptureSession) {
+        session.startRunning()
+    }
+    
+    // Updates UI State using the calculated openness number
+    func updateEyeState(hasFace: Bool, avgOp: CGFloat?) {
+        guard !isPaused else { return }
+        
+        if !hasFace {
+            handleNoFace()
+            return
+        }
+        
+        guard let avg = avgOp else {
+            self.eyesOpen = false
+            if self.lastClosedStart == nil {
+                self.lastClosedStart = Date()
+            } else {
+                self.closedDuration = Date().timeIntervalSince(self.lastClosedStart!)
+                if self.closedDuration >= self.closedThreshold && !self.alertedWhileClosed {
+                    self.alertedWhileClosed = true
+                    self.onEyesClosedLong?()
+                }
+            }
+            return
+        }
+
+        let threshold: CGFloat = 0.18
+        if avg > threshold {
+            self.eyesOpen = true
+            self.lastClosedStart = nil
+            self.closedDuration = 0
+            self.alertedWhileClosed = false
+        } else {
+            if self.lastClosedStart == nil {
+                self.lastClosedStart = Date()
+            }
+            self.closedDuration = Date().timeIntervalSince(self.lastClosedStart!)
+            self.eyesOpen = false
+            if self.closedDuration >= self.closedThreshold && !self.alertedWhileClosed {
+                self.alertedWhileClosed = true
+                self.onEyesClosedLong?()
+            }
+        }
+    }
 }
 
 extension EyeDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
-    func captureOutput(
+    nonisolated func captureOutput(
         _ output: AVCaptureOutput,
         didOutput sampleBuffer: CMSampleBuffer,
         from connection: AVCaptureConnection
     ) {
-        guard isRunning, !isPaused else { return }
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
+        let request = VNDetectFaceLandmarksRequest()
         let handler = VNImageRequestHandler(
             cvPixelBuffer: pixelBuffer,
             orientation: .leftMirrored,
             options: [:]
         )
 
-        try? handler.perform([self.faceRequest])
+        try? handler.perform([request])
+        let faceResult = request.results?.first as? VNFaceObservation
+        
+        let hasFace = faceResult != nil
+        let avgOp = calculateOpenness(from: faceResult)
+        
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            guard self.isRunning else { return }
+            
+            if hasFace {
+                self.lastFaceSeen = Date()
+            }
+            self.updateEyeState(hasFace: hasFace, avgOp: avgOp)
+        }
     }
 
-    private func processFaceObservation(_ face: VNFaceObservation) {
-        guard !isPaused else { return }
-        guard let landmarks = face.landmarks else {
-            handleNoFace()
-            return
-        }
+    nonisolated private func calculateOpenness(from face: VNFaceObservation?) -> CGFloat? {
+        guard let face = face, let landmarks = face.landmarks else { return nil }
 
         func openness(for eye: VNFaceLandmarkRegion2D?, boundingBox: CGRect) -> CGFloat? {
             guard let eye = eye, eye.pointCount > 5 else { return nil }
-            let pts = (0..<eye.pointCount).map { i in
-                eye.normalizedPoints[i]
-            }
-
+            let pts = (0..<eye.pointCount).map { i in eye.normalizedPoints[i] }
             let ys = pts.map { $0.y }
             let xs = pts.map { $0.x }
             guard let minY = ys.min(), let maxY = ys.max(), let minX = xs.min(), let maxX = xs.max() else { return nil }
@@ -226,55 +274,10 @@ extension EyeDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
         let leftOp = openness(for: landmarks.leftEye, boundingBox: face.boundingBox)
         let rightOp = openness(for: landmarks.rightEye, boundingBox: face.boundingBox)
 
-        var avgOp: CGFloat? = nil
         if let l = leftOp, let r = rightOp {
-            avgOp = (l + r) / 2.0
+            return (l + r) / 2.0
         } else {
-            avgOp = leftOp ?? rightOp
+            return leftOp ?? rightOp
         }
-
-        DispatchQueue.main.async {
-            guard let avg = avgOp else {
-                self.eyesOpen = false
-                if self.lastClosedStart == nil {
-                    self.lastClosedStart = Date()
-                } else {
-                    self.closedDuration = Date().timeIntervalSince(self.lastClosedStart!)
-                    if self.closedDuration >= self.closedThreshold && !self.alertedWhileClosed {
-                        self.alertedWhileClosed = true
-                        self.onEyesClosedLong?()
-                    }
-                }
-                return
-            }
-
-            let threshold: CGFloat = 0.18
-            if avg > threshold {
-                self.eyesOpen = true
-                self.lastClosedStart = nil
-                self.closedDuration = 0
-                self.alertedWhileClosed = false 
-            } else {
-                if self.lastClosedStart == nil {
-                    self.lastClosedStart = Date()
-                }
-                self.closedDuration = Date().timeIntervalSince(self.lastClosedStart!)
-                self.eyesOpen = false
-                if self.closedDuration >= self.closedThreshold && !self.alertedWhileClosed {
-                    self.alertedWhileClosed = true
-                    self.onEyesClosedLong?()
-                }
-            }
-        }
-    }
-    
-    func acknowledgeAlertAndReset() {
-        alertedWhileClosed = true
-        lastClosedStart = nil
-        closedDuration = 0
-    }
-    
-    nonisolated private func startCaptureSession(_ session: AVCaptureSession) {
-            session.startRunning()
     }
 }

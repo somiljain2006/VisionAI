@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct DriverProfileView: View {
     @Environment(\.dismiss) private var dismiss
